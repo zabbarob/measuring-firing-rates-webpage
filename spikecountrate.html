@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Spike Count Rate</title>
+	<style>
+		.spike, .axis path, .axis line {
+      fill: none;
+      stroke: gray;
+      stroke-width: 1px;
+		}
+    .spike {
+      stroke: lightgray;
+    }
+    .axis {
+      font: 10px sans-serif;
+      shape-rendering: crispEdges;
+    }
+    .brush .extent, .brush .resize {
+      fill-opacity: .1;
+      pointer-events: none;
+    }
+    .brush.text {
+      font: 10px sans-serif;
+    }
+    .bar {
+      fill-opacity: .7;
+      fill: skyblue;
+      stroke: steelblue;
+    }
+    .bartext {
+      font: 10px sans-serif;
+    }
+	</style>
+</head>
+<body>
+<script src="d3.v3.min.js" charset="utf-8"></script>
+<script type="text/javascript">
+var data = [
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
+	],
+	parent = d3.select('body'),
+	width = 200,
+  height = 25,
+  margin = {top: 15, bottom: 20, left: 15, right: 15};
+
+var xScale = d3.scale.linear().range([0, width - 1]),
+ 	  yScale = d3.scale.linear().range([height - 1, 0]);
+
+var svg = parent.append('svg')
+          .attr('width', width + margin.left + margin.right)
+          .attr('height', height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+svg.append("g")
+    .classed("x axis", true)
+    .attr("transform", "translate(0," + yScale(0) + ")")
+    .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(String));
+
+var spike = svg.selectAll('.spike')
+	.data(data)
+  .enter().append('line')
+  	.classed('spike', true)
+    .attr('x1', function(d, i) { return xScale(i / data.length); })
+    .attr('x2', function(d, i) { return xScale(i / data.length); })
+  	.attr('y1', yScale(0))
+  	.attr('y2', yScale);
+
+var deltaT = 1/20,
+    cumsum = function(t){
+        var index = t * data.length;
+        return d3.sum(data.slice(0, index));
+    },
+    spikecountrate = function(t){
+      var index = Math.floor(t / deltaT),
+          start = index * deltaT,
+          end = (index + 1) * deltaT;
+      return cumsum(end) - cumsum(start);
+    };
+
+var rebin = function(){
+  var binData = (function(){
+        var bins = [],
+            binwidth = Math.max(Math.round(deltaT * data.length), 1);
+        for (var i = 0; i < data.length; i += binwidth) {
+            var spikecountrate = d3.sum(data.slice(i, i + binwidth));
+            bins.push(spikecountrate);
+        }
+        return bins;
+    })(),
+    binXScale = d3.scale.ordinal().rangeBands([0, width - 1], 0, 0).domain(d3.range(binData.length)),
+    binYScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(binData)]);
+
+svg.selectAll(".bar")
+      .data(binData)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d, i) { return binXScale(i); })
+      .attr("width", binXScale.rangeBand())
+      .attr("y", binYScale)
+      .attr("height", function(d) { return height - binYScale(d); });
+
+svg.selectAll(".bartext")
+      .data(binData)
+    .enter().append('text')
+      .classed('bartext', true)
+      .attr("text-anchor", "middle")
+      .attr('y', function(d) { return binYScale(d) - 3; })
+      .attr('x', function(d, i){ return binXScale(i) + 0.5 * binXScale.rangeBand();})
+      .text(String);
+}
+rebin();
+</script>
+</body>
+</html>
