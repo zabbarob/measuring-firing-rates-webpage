@@ -70,7 +70,7 @@ var svg = parent.append('svg')
 svg.append("g")
     .classed("x axis", true)
     .attr("transform", "translate(0," + yScale(0) + ")")
-    .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(String));
+    .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
 
 var spike = svg.selectAll('.spike')
 	.data(data)
