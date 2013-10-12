@@ -7,7 +7,7 @@
 		.spike, .axis path, .axis line {
       fill: none;
       stroke: gray;
-      stroke-width: 1;
+      stroke-width: 1px;
 		}
     .selected {
       stroke: skyblue;
@@ -19,6 +19,9 @@
     .brush .extent, .brush .resize {
       fill-opacity: .1;
       pointer-events: none;
+    }
+    .brush.text {
+      font: 10px sans-serif;
     }
 	</style>
 </head>
@@ -34,10 +37,10 @@ var data = [
 	parent = d3.select('body'),
 	width = 200,
   height = 25,
-  margin = {top: 5, bottom: 20, left: 15, right: 15};
+  margin = {top: 15, bottom: 20, left: 15, right: 15};
 
-var xScale = d3.scale.linear().range([0, width]),
- 	  yScale = d3.scale.linear().range([height, 0]);
+var xScale = d3.scale.linear().range([0, width - 1]),
+ 	  yScale = d3.scale.linear().range([height - 1, 0]);
 
 var svg = parent.append('svg')
           .attr('width', width + margin.left + margin.right)
@@ -60,45 +63,41 @@ var spike = svg.selectAll('.spike')
   	.attr('y2', yScale);
 
 var brush = d3.svg.brush()
-    .x(xScale)
-    .extent([0, 0.7])
-    .clamp(true)
-    .on("brushstart", brushstart)
-    .on("brush", brushmove)
-    .on("brushend", brushend),
-    brushg = svg.append("g").attr("class", "brush").call(brush);
+        .x(xScale)
+        .extent([0, 0.6]),
+    brushg = svg.append("g")
+        .attr("class", "brush")
+        .call(brush),
+    brushtext = brushg.append('text')
+        .classed('brush text', true)
+        .attr('y', -7),
+    brushmove = function(){
+        var s = brush.extent();
+        spike.classed("selected", function(d, i) {
+            x = i / data.length;
+            return s[0] <= x && x <= s[1];
+        });
 
-brushg.selectAll("rect").attr({y: -5, height: height + 5})
-.on("mousedown", function(){
-    d3.event.stopPropagation();
-});
+        var spikecount = d3.sum(data.slice(0, Math.round(s[1] * data.length))),
+            text = spikecount + (spikecount == 1 ? ' spike' : ' spikes');
+        brushtext.text(text);
+        var box = brushtext.node().getBBox(),
+            offset = spikecount < 10 ? 5 : 10;
+        brushtext.attr('x', Math.min(width - box.width, xScale(s[1]) - offset));
+    };
+
+brushg.selectAll("rect")
+  .attr({y: -5, height: height + 5})
+  .on("mousedown", function(){
+      d3.event.stopPropagation();
+  });
 
 svg.on("mousemove", function(e) {
-  brush.extent([0, Math.min(Math.max(xScale.invert(d3.mouse(this)[0]), .03), 1)]);
-  var s = svg.select('.brush');
-  s.call(brush);
-  brush.event(s);
+  brush.extent([0, Math.max(xScale.invert(d3.mouse(this)[0]), .03)]);
+  svg.select('.brush').call(brush);
+  brushmove();
 });
-
-brushstart();
 brushmove();
-
-function brushstart() {
-  svg.classed("selecting", true);
-}
-
-function brushmove() {
-  var s = brush.extent();
-  spike.classed("selected", function(d, i) {
-    x = i / data.length;
-    return s[0] <= x && x <= s[1];
-  });
-}
-
-function brushend() {
-  svg.classed("selecting", !d3.event.target.empty());
-}
-
 
 </script>
 </body>
