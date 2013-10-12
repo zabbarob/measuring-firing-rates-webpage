@@ -120,20 +120,26 @@ var rebin = function(deltaT){
         .attr("height", function(d) { return height - binYScale(d); });
 
     svg.selectAll(".bartext").remove();
-    if (xScale(deltaT) > 7) {
-        svg.selectAll(".bartext")
-            .data(binData)
-          .enter().append('text')
-            .classed('bartext', true)
-            .attr("text-anchor", "middle")
-            .attr('y', function(d) { return binYScale(d) - 3; })
-            .attr('x', function(d, i){
-                var left = xScale(i * deltaT),
-                    right = Math.min(xScale((i + 1) * deltaT), width);
-                return .5 * (left + right);
-            })
-            .text(String);
-    }
+    var valueSet = d3.set();
+    svg.selectAll(".bartext")
+        .data(binData)
+      .enter().append('text')
+        .classed('bartext', true)
+        .attr("text-anchor", "middle")
+        .attr('y', function(d) { return binYScale(d) - 3; })
+        .attr('x', function(d, i){
+            var left = xScale(i * deltaT),
+                right = Math.min(xScale((i + 1) * deltaT), width);
+            return .5 * (left + right);
+        })
+        .filter(function(d) {
+            if (valueSet.has(d) && xScale(deltaT) < 15) {
+                return false;
+            }
+            valueSet.add(d);
+            return true;
+        })
+        .text(String);
 }
 
 
