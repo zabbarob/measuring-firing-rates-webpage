@@ -145,7 +145,7 @@ var rebin = function(deltaT){
 
 var brush = d3.svg.brush()
     .x(xScale)
-    .extent([0, 0])
+    .extent([1, 1])
     .on("brush", brushed);
 
 var slider = svg.append("g")
@@ -166,8 +166,9 @@ var handle = slider.append("circle")
 slider
     .call(brush.event)
   .transition() // gratuitous intro!
-    .duration(750)
-    .call(brush.extent([.3, .3]))
+    .duration(3000)
+    .ease('exp-out')
+    .call(brush.extent([.125, .125]))
     .call(brush.event);
 
 function brushed() {
