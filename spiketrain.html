@@ -4,10 +4,18 @@
 	<meta charset="utf-8" />
 	<title>Spike Train</title>
 	<style>
-		.line, .axis path {
-      stroke: gray;
-      stroke-width: 1;
+    .axis,
+    .axis path,
+    .axis line {
+      stroke: lightgray;
+      fill: none;
+      stroke-width: 2px;
+      shape-rendering: crispEdges;
 		}
+    .spike {
+      stroke: gray;
+      stroke-width: 2px;
+    }
 	</style>
 </head>
 <body>
@@ -24,7 +32,7 @@ var data = [
     0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
 	],
 	parent = d3.select('body'),
-	width = 200,
+	width = Math.floor(window.innerWidth * .9),
   height = 25;
 
 var xScale = d3.scale.linear().range([0, width - 1]).domain([0, data.length - 1]),
@@ -32,17 +40,17 @@ var xScale = d3.scale.linear().range([0, width - 1]).domain([0, data.length - 1]
 
 var svg = parent.append('svg')
           .attr('width', width)
-          .attr('height', height);
+          .attr('height', height + 10);
 
-var xAxis = d3.svg.axis().scale(xScale).orient('bottom').tickFormat('').tickSize(0);
 svg.append("g")
   .classed("x axis", true)
-  .attr("transform", "translate(0," + yScale(0) + ")").call(xAxis);
+  .attr("transform", "translate(0," + yScale(0) + ")")
+  .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
 
 svg.selectAll('.bar')
 	.data(data)
   .enter().append('line')
-  	.classed('line', true)
+  	.classed('spike', true)
     .attr('x1', function(d, i) { return xScale(i); })
     .attr('x2', function(d, i) { return xScale(i); })
   	.attr('y1', yScale(0))
