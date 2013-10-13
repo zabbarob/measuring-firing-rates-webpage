@@ -15,7 +15,7 @@ li {
 <!-- [if lt IE 9]>
 <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"> </script>
 <![endif]-->
-<title>GLM Fitting with Splines</title>
+<title>Firing Rates</title>
 <link rel="stylesheet" href="d3.slider.css" />
 <style>
   .axis path, .axis line {
@@ -48,8 +48,22 @@ li {
   <header>
     <div class="hero-unit">
       <div class="container">
-        <h1>GLM Fitting with Splines</h1>
-        <p>Generalized linear models (GLMs) are awesome for decoding neuronal activity! They can do all the necessary wibbly-wobbly stuff...</p>
+        <h1>Measuring Firing Rates</h1>
+        <br>
+        <p><b>Neurons</b> communicate with each other by firing so-called
+          <b><abbr title="an electrochemical potential">action potentials</abbr></b>.
+          A single action potential usually has a
+          duration of roughly one millisecond. If we ignore its
+          duration, amplitude and shape, we can treat an action potential as
+          a stereotypical on-off event, where a single action potential firing
+          is called a spike. A sequence of spikes recorded over a single
+          <abbr title="usually a time span of several seconds">trial</abbr> is
+          called a <b>spike train</b>. If we record multiple trials we can
+          average the number of spikes fired at a specific time point over
+          these trials. The resulting value is the <b>firing rate</b> of the
+          neuron at a specific time point. Since we can only record a limited
+          number of trials the real firing rate can only be approximated but
+          not determined exactly. In the following we will look at different methods to approximate firing rates. For demonstration purposes only a single spike train will be used. By averaging over multiple trials before applying any of the discussed methods, more accurate results can be achieved.</p>
       </div>
     </div>
   </header>
