@@ -32,7 +32,9 @@
   <header>
     <div class="hero-unit">
       <div class="container">
-        <h1>Measuring Firing Rates<br><small>by Robert Costa, 2013 October 13</small></h1>
+        <h1>Measuring Firing Rates</h1>
+        <h1><small>by Robert Costa, 2013 October 13</small></h1>
+        <div style="padding-right:30px;">
         <p class="muted" style="line-height:1em;"><small>All methods demonstrated on this web page are based on the subsection <i>Measuring Firing Rates</i> of section <i>1.2 Spike Trains and Firing Rates</i> of <i>Dayan, P., Abbott, L. F., &amp; Abbott, L. (2001). Theoretical neuroscience: Computational and mathematical modeling of neural systems</i>.</small></p>
         <p><b>Neurons</b> communicate with each other by firing so-called
           <b><abbr title="an electrochemical potential">action potentials</abbr></b>.
@@ -48,28 +50,41 @@
           neuron at a specific time point. Since we can only record a limited
           number of trials the real firing rate can only be approximated but
           not determined exactly. In the following we will look at different methods to approximate firing rates. For demonstration purposes only a single spike train will be used. By averaging over multiple trials before applying any of the discussed methods, more accurate results can be achieved.</p>
+        </div>
       </div>
     </div>
   </header>
   <div class="container">
     <div class="row-fluid">
-      <div class="span2"><b>Spike Count Rate</b></div>
-      <div class="span10">
+      <div class="span3 lead"><b>Spike Count Rate</b></div>
+      <div class="span9">
+        <p class="lead">The simplest approach to measuring firing rates is to count the number of spikes occurring within a given time frame.</p>
+        <div class="row-fluid">
+          <div class="span4">
+            <p>If we count over the whole trial we get the average number of spikes but loose all temporal resolution.</p>
+          </div>
+          <div class="span4">
+            <p>To know how the spike count rate changes over time we can subdivide the trial into smaller time bins.</p>
+          </div>
+          <div class="span4">
+            <p>The smaller the time bins the better the temporal resolution. But this comes at the expense of a decreasing rate resolution. For very small time bins the rate can only be either 1 or 0.</p>
+          </div>
+        </div>
       </div>
     </div>
     <div class="row-fluid">
-      <div class="span2"><b>Window Function</b></div>
-      <div class="span10">
+      <div class="span3 lead"><b>Window Function</b></div>
+      <div class="span9">
       </div>
     </div>
     <div class="row-fluid">
-      <div class="span2"><b>Linear Filter</b></div>
-      <div class="span10">
+      <div class="span3 lead"><b>Linear Filter</b></div>
+      <div class="span9">
       </div>
     </div>
     <div class="row-fluid">
-      <div class="span2"><b>Causal Kernel</b></div>
-      <div class="span10">
+      <div class="span3 lead"><b>Causal Kernel</b></div>
+      <div class="span9">
       </div>
     </div>
   </div>
