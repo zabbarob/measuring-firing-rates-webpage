@@ -7,13 +7,33 @@
 <!-- [if lt IE 9]>
 <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"> </script>
 <![endif]-->
+<style>
+.browser-logos {
+    text-align: center;
+    margin-top: 1em;
+}
+.footer {
+    text-align: center;
+    padding-top: 30px;
+    margin-top: 70px;
+    border-top: 1px solid #e5e5e5;
+    background-color: #f5f5f5;
+}
+.footer p {
+    margin-bottom: 0;
+    color: #777;
+}
+.footer a {
+    color: #444;  
+}
+</style>
 <title>Firing Rates</title>
 <body>
   <header>
     <div class="hero-unit">
       <div class="container">
         <h1>Measuring Firing Rates<br><small>by Robert Costa, 2013 October 13</small></h1>
-        <p class="muted" style="line-height:1em;"><small>All methods demonstrated on this web page are based on section <i>1.2 Spike Trains and Firing Rates</i> of <i>Dayan, P., Abbott, L. F., &amp; Abbott, L. (2001). Theoretical neuroscience: Computational and mathematical modeling of neural systems</i>.</small></p>
+        <p class="muted" style="line-height:1em;"><small>All methods demonstrated on this web page are based on the subsection <i>Measuring Firing Rates</i> of section <i>1.2 Spike Trains and Firing Rates</i> of <i>Dayan, P., Abbott, L. F., &amp; Abbott, L. (2001). Theoretical neuroscience: Computational and mathematical modeling of neural systems</i>.</small></p>
         <p><b>Neurons</b> communicate with each other by firing so-called
           <b><abbr title="an electrochemical potential">action potentials</abbr></b>.
           A single action potential usually has a
@@ -33,11 +53,46 @@
   </header>
   <div class="container">
     <div class="row-fluid">
-      <div class="span2"><b class="initialism">Spike Count Rate</b></div>
+      <div class="span2"><b>Spike Count Rate</b></div>
+      <div class="span10">
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span2"><b>Window Function</b></div>
+      <div class="span10">
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span2"><b>Linear Filter</b></div>
+      <div class="span10">
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span2"><b>Causal Kernel</b></div>
       <div class="span10">
       </div>
     </div>
   </div>
+  <footer class="footer">
+    <div class="container">
+      <p class="muted">
+        Web page designed by Robert Costa using
+        <a href="http://getbootstrap.com">Bootstrap</a>,
+        <a href="http://jquery.com/">jQuery</a> and
+        <a href="http://d3js.org/">D3.js</a>.
+        Bootstrap code is licensed under <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License v2.0</a>, Bootstrap documentation under <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+        jQuery is licensed under the <a href="http://github.com/jquery/jquery/blob/master/MIT-LICENSE.txt">MIT License</a>.
+        D3.js is released under <a href="http://opensource.org/licenses/BSD-3-Clause">BSD license</a>.
+        <a href="http://glyphicons.com">Glyphicons Free</a> licensed under <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+        JavaScript icon by Robert Costa (Own work), licensed under [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC-BY-SA-3.0</a>].
+        Google Chrome icon by Umut159 (Own work) [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC-BY-SA-3.0</a>], <a href="http://commons.wikimedia.org/wiki/File%3AGoogle_Chrome_icon_(2011).png">via Wikimedia Commons</a>.
+        Mozilla Firefox icon by Mozilla Foundation [<a href="http://www.gnu.org/licenses/gpl.html">GPL</a> or <a href="http://www.gnu.org/licenses/lgpl.html">LGPL</a>], <a href="http://commons.wikimedia.org/wiki/File%3AMozilla_Firefox_3.5_logo_256.png">via Wikimedia Commons</a>.
+        Internet Explorer icon copyright by Microsoft Corporation.
+        Safari icon copyright by Apple Inc.
+        It is believed that the exhibition of icons to illustrate or identify the computer software in question qualifies as fair use under United States copyright law.
+      </p>
+    </div>
+  </footer>
 <script src="d3.v3.min.js" charset="utf-8"></script>
 <script>
 </script>
