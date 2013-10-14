@@ -200,11 +200,33 @@
     <div class="row-fluid">
       <div class="span3 lead"><b>Linear Filter</b></div>
       <div class="span9">
+        <p class="lead">Instead of using a rectangular window function that weighs all spikes in the same way, other window functions can be used. A gaussian window function will weigh spikes that are further away from the time point less than near ones. This can provide a smooth window function. Instead of summing the values up in discrete time steps, the integral can be computed. Such firing rate functions are also called linear filters and their window functions are called kernels.</p>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
       </div>
     </div>
     <div class="row-fluid">
       <div class="span3 lead"><b>Causal Kernel</b></div>
       <div class="span9">
+        <p class="lead">Both the rectangular window function and the Gaussian window function take not only spikes that happened in the past into account but also those happening in the future, with respect to a given timepoint on the spike train. To only use spikes that happened in the past the window function should become zero for negative values. A commonly used causal kernel is the alpha function.</p>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -857,5 +879,13 @@ function overlappingWindows(parent, parentWidth){
 
 overlappingWindows(d3.select('#overlapping-windows'), parentWidth);
 
+/**
+ * refresh graphics when browser size changes
+ */
+var timeout;
+$(window).resize(function(){
+    clearTimeout(timeout);
+    timeout = setTimeout(function(){ location.reload(true); }, 300);
+});
 </script>
 </body>
