@@ -77,19 +77,56 @@
   font: 10px sans-serif;
 }
 .bar {
-  fill-opacity: .7;
+  fill-opacity: .5;
   fill: skyblue;
   stroke: steelblue;
+  stroke-opacity: .5;
 }
 .bartext {
   font: 10px sans-serif;
 }
 .slider .handle {
-  opacity: .5;
-  fill: firebrick;
-  stroke: steelblue;
-  stroke-width: 1px;
+  opacity: .8;
+  fill: none;
+  stroke: firebrick;
+  stroke-width: 2px;
   pointer-events: none;
+}
+
+/**
+ * window function
+ */
+.timeWindow {
+  fill-opacity: .5;
+  fill: skyblue;
+  stroke: none;
+}
+.spikeCount {
+  font: 10px sans-serif;
+}
+
+/**
+ * firing rate approximated by rectangular window function
+ */
+.firingRate {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1;
+}
+
+/**
+ * overlapping windows
+ */
+#overlapping-windows .timeWindow {
+  fill-opacity: .25;
+  fill: skyblue;
+}
+.selected {
+  stroke: black;
+}
+#overlapping-windows .staticBrush {
+  stroke: black;
+  stroke-width: 1;
 }
 
 </style>
@@ -150,8 +187,13 @@
         <p class="lead">Counting spikes in pre-assigned time bins lets the firing rate approximation not only depend on the width of the time bins but also on their placement. By sliding a single time bin over the whole trial duration we can avoid the arbitrariness in placement.</p>
         <div class="row-fluid">
           <div class="span4">Counting spikes within a window around a specific time point avoids arbitrariness in placing of time bins.</div>
-          <div class="span4">The resulting firing rate appears to have a better temporal resolution. But at time points close to each other firing rates are correlated.</div>
+          <div class="span4">The resulting firing rate appears to have a better temporal resolution. But at time points close to each other, firing rates are correlated.</div>
           <div class="span4">The same spikes are counted for different time points, when those time points have overlapping windows.</div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4" id="window-function"></div>
+          <div class="span4" id="rect-window-rate"></div>
+          <div class="span4" id="overlapping-windows"></div>
         </div>
       </div>
     </div>
@@ -235,9 +277,9 @@ spikeTrain(d3.select('#spike-train'));
  * spike count rate graphs
  */
 
-function spikeCountRate(parent, sliderPos, activeSlider) {
+function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
     var margin = {top: 15, bottom: 20, left: 15, right: 15},
-        width = $(parent.node()).width() - margin.left - margin.right,
+        width = parentWidth - margin.left - margin.right,
         height = 25;
 
     var xScale = d3.scale.linear().range([0, width - 1]),
@@ -342,26 +384,25 @@ function spikeCountRate(parent, sliderPos, activeSlider) {
         .attr("height", height);
 
     if (activeSlider) {
-        var handle = slider.append("circle")
-            .attr("class", "handle")
-            .attr("transform", "translate(0," + height + ")")
-            .attr("r", 5);
-
-        slider
-            .call(brush.event)
+        var handle = slider.append('line')
+            .classed('handle', true)
+            .attr("y1", -5)
+            .attr("y2", height + 5);
 
         function brushed() {
-            var value = brush.extent()[0],
-                mouseX = d3.mouse(this)[0];
-
-            if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
-              value = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
-              brush.extent([value, value]);
+            if (d3.event) {
+                var mouseX = d3.mouse(this)[0];
+                if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                    var value = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                    brush.extent([value, value]);
+                }
             }
-
-            handle.attr("cx", xScale(value));
+            var value = d3.mean(brush.extent()),
+                x = xScale(value);
+            handle.attr({x1: x, x2: x});
             rebin(value);
         }
+        brushed();
         svg.append('rect')
           .attr('class', 'click-capture')
           .style('opacity', 0)
@@ -376,16 +417,445 @@ function spikeCountRate(parent, sliderPos, activeSlider) {
         rebin(sliderPos);
     }
 }
-
-spikeCountRate(d3.select('#spike-count-max'), 1, false);
-spikeCountRate(d3.select('#spike-count-var'), .125, true);
-spikeCountRate(d3.select('#spike-count-min'), .01, false);
+var parentWidth = $('#spike-count-max').width();
+spikeCountRate(d3.select('#spike-count-max'), 1, false, parentWidth);
+spikeCountRate(d3.select('#spike-count-var'), .125, true, parentWidth);
+spikeCountRate(d3.select('#spike-count-min'), .01, false, parentWidth);
 
 /**
  * window function
  */
 
+function windowFunction(parent, parentWidth) {
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
 
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spike = svg.selectAll('.spike')
+      .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', function(d, i) { return xScale(i / data.length); })
+        .attr('x2', function(d, i) { return xScale(i / data.length); })
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+
+    var winWidth = .2,
+        winExtent = function(t, winWidth) {
+          return [t - .5 * winWidth, t + .5 * winWidth];
+        };
+
+    var brush = d3.svg.brush()
+        .x(xScale)
+        .extent(winExtent(.4, winWidth))
+        .on("brush", brushed);
+    var slider = svg.append("g")
+        .attr("class", "slider")
+        .call(brush);
+
+    slider.selectAll(".extent, .resize")
+        .remove();
+
+    slider.select(".background")
+        .attr("height", height);
+
+    var handleOffset = 5,
+        handle = slider.append('line')
+          .classed('handle', true)
+          .attr("y1", -handleOffset)
+          .attr("y2", height + handleOffset);
+
+    var timeWindow = chartBody.append('rect')
+        .classed('timeWindow', true)
+        .attr("x", xScale(brush.extent()[0]))
+        .attr("width", xScale(brush.extent()[1] - brush.extent()[0]))
+        .attr("y", 0)
+        .attr("height", height);
+
+    var spikeCount = svg.append('text')
+        .classed('spikeCount',  true)
+        .attr('y', -handleOffset - 3)
+        .attr('text-anchor', 'middle')
+        .text('10');
+
+    function brushed() {
+        if (d3.event) {
+            var mouseX = d3.mouse(this)[0];
+            if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+              t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+              brush.extent(winExtent(t, winWidth));
+            }
+        }
+        var middle = xScale(d3.mean(brush.extent())),
+            brushStart = brush.extent()[0],
+            brushEnd = brush.extent()[1];
+        handle.attr({x1: middle, x2: middle});
+        timeWindow
+            .attr("x", xScale(brushStart))
+            .attr("width", xScale(brushEnd - brushStart));
+        spikeCount
+            .attr('x', middle)
+            .text(function(){
+                var dataStart = Math.max(Math.round(brushStart * data.length), 0),
+                    dataEnd = Math.min(Math.round(brushEnd * data.length), data.length);
+                return d3.sum(data.slice(dataStart, dataEnd));
+            });
+    }
+    brushed();
+
+    svg.append('rect')
+      .attr('class', 'click-capture')
+      .style('opacity', 0)
+      .attr('x', -margin.top)
+      .attr('y', -margin.left)
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .on('mousemove', brushed);
+    svg.on('mousemove', brushed);
+}
+
+windowFunction(d3.select('#window-function'), parentWidth);
+
+/**
+ * firing rate approximated by rectangular window function
+ */
+
+function rectWindowRate(parent, parentWidth){
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spikeScale = function(d, i) { return xScale(i / (data.length - 1)); }, 
+        spike = svg.selectAll('.spike')
+        .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', spikeScale)
+        .attr('x2', spikeScale)
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+
+    var winWidth = .2,
+        winExtent = function(t, winWidth) {
+          return [t - .5 * winWidth, t + .5 * winWidth];
+        };
+
+    var firingRate = data.map(function(d, i){
+            var winBins = winWidth * data.length;
+                start = Math.floor(i - .5 * winBins),
+                end = Math.floor(start + winBins);
+            return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        });
+
+    var rateLine = d3.svg.line()
+        .x(function(d, i){ return xScale(i / (data.length - 1)); })
+        .y(yScale)
+        .interpolate('step-after');
+
+    var ratePath = svg.append('path')
+        .classed('firingRate', true)
+        .attr('d', rateLine(firingRate.map(function(d) { return d / d3.max(firingRate); })));
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+
+    var brush = d3.svg.brush()
+        .x(xScale)
+        .extent(winExtent(.4, winWidth))
+        .on("brush", brushed);
+
+    var slider = svg.append("g")
+        .attr("class", "slider")
+        .call(brush);
+
+    slider.selectAll(".extent, .resize")
+        .remove();
+
+    slider.select(".background")
+        .attr("height", height);
+
+    var handleOffset = 5,
+        handle = slider.append('line')
+          .classed('handle', true)
+          .attr("y1", -handleOffset)
+          .attr("y2", height + handleOffset);
+
+    var spikeCount = svg.append('text')
+        .classed('spikeCount',  true)
+        .attr('y', -handleOffset - 3)
+        .attr('text-anchor', 'middle');
+/*
+    var timeWindow = chartBody.append('rect')
+        .classed('timeWindow', true)
+        .attr("y", 0)
+        .attr("height", height);
+*/
+
+    function brushed() {
+        if (d3.event) {
+            var mouseX = d3.mouse(this)[0];
+            if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                brush.extent([t, t]);
+            }
+        }
+        var brushValue = d3.mean(brush.extent()),
+            middle = xScale(brushValue);
+        handle.attr({x1: middle, x2: middle});
+
+        var timeIndex = Math.round(brushValue * (firingRate.length - 1)),
+            i = Math.min(Math.max(timeIndex, 0), firingRate.length - 1);
+
+        spikeCount
+            .attr('x', middle)
+            .text(firingRate[i]);
+
+        var winBins = winWidth * firingRate.length;
+            start = Math.floor(i - .5 * winBins),
+            end = Math.floor(start + winBins);
+        //return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        spike.classed("selected", function(d, i) {
+            return start < i && i < end;
+        });
+
+/*
+        timeWindow
+            .attr("x", xScale(brushValue - .5 * winWidth))
+            .attr("width", xScale(winWidth));*/
+    }
+    brushed();
+
+    svg.append('rect')
+      .attr('class', 'click-capture')
+      .style('opacity', 0)
+      .attr('x', -margin.top)
+      .attr('y', -margin.left)
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .on('mousemove', brushed);
+    svg.on('mousemove', brushed);
+}
+
+rectWindowRate(d3.select('#rect-window-rate'), parentWidth);
+
+/**
+ * overlapping windows
+ */
+
+function overlappingWindows(parent, parentWidth){
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+              .attr('width', width + margin.left + margin.right)
+              .attr('height', height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spikeScale = function(d, i) { return xScale(i / (data.length - 1)); }, 
+        spike = svg.selectAll('.spike')
+            .data(data)
+          .enter().append('line')
+            .classed('spike', true)
+            .attr('x1', spikeScale)
+            .attr('x2', spikeScale)
+            .attr('y1', yScale(0))
+            .attr('y2', yScale);
+
+    var winWidth = .2;
+
+    var firingRate = data.map(function(d, i){
+            var winBins = winWidth * data.length;
+                start = Math.floor(i - .5 * winBins),
+                end = Math.floor(start + winBins);
+            return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        });
+
+    var rateLine = d3.svg.line()
+        .x(function(d, i){ return xScale(i / (data.length - 1)); })
+        .y(yScale)
+        .interpolate('step-after');
+
+    var ratePath = svg.append('path')
+        .classed('firingRate', true)
+        .attr('d', rateLine(firingRate.map(function(d) { return d / d3.max(firingRate); })));
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+    var makeWindowBrush = function(parent, xScale, startpos, winWidth, windowFunction, updateBrush, staticBrush){
+        var winExtent = function(center, width){
+              var start = center - .5 * width;
+              return [start, start + width];
+            };
+
+        var brush = d3.svg.brush()
+            .x(xScale)
+            .extent(winExtent(startpos, winWidth))
+            .on("brush", brushed);
+
+        var slider = svg.append("g")
+            .attr("class", "slider")
+            .call(brush);
+
+        slider.selectAll(".extent, .resize")
+            .remove();
+
+        slider.select(".background")
+            .attr("height", height);
+
+        var handleOverlap = 5,
+            handle = slider.append('line')
+                .classed('handle', true)
+                .classed('staticBrush', staticBrush)
+                .attr("y1", -handleOverlap)
+                .attr("y2", height + handleOverlap);
+
+        var spikeCount = svg.append('text')
+                .classed('spikeCount',  true)
+                .attr('y', -handleOverlap - 3)
+                .attr('text-anchor', 'middle');
+
+        var timeWindow = chartBody.append('rect')
+                .classed('timeWindow', true)
+                .attr("y", 0)
+                .attr("height", height);
+
+        function brushed() {
+            var mouseX = d3.event && d3.mouse(this)[0];
+            if (d3.event && d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                brush.extent(winExtent(t, winWidth));
+            }
+
+            var time = d3.mean(brush.extent()),
+                x = xScale(time);
+
+            handle.attr({x1: x, x2: x});
+            spikeCount.attr('x', x).text(windowFunction(time));
+            timeWindow
+                .attr("x", xScale(brush.extent()[0]))
+                .attr("width", xScale(brush.extent()[1] - brush.extent()[0]));
+
+            updateBrush();
+        };
+        brushed();
+        return brush;
+    };
+
+    var windowFunction = function(t){
+            var timeIndex = Math.round(t * firingRate.length);
+            return firingRate[Math.min(Math.max(timeIndex, 0), firingRate.length - 1)];
+        },
+        brush1 = makeWindowBrush(svg, xScale, .5, winWidth, windowFunction, updateBrush, true),
+        brush2 = makeWindowBrush(svg, xScale, .4, winWidth, windowFunction, updateBrush, false);
+
+    function updateBrush(){
+        if (!brush1 || !brush2) {
+            return;
+        }
+
+        var e1 = brush1.extent(),
+            e2 = brush2.extent(),
+            overlap = [0, -1];
+
+        if (e2[1] - e1[0] < e1[1] - e2[0]) {
+            overlap = [e1[0], e2[1]];
+        } else {
+            overlap = [e2[0], e1[1]];
+        }
+
+        spike.classed("selected", function(d, i) {
+            x = i / data.length;
+            return overlap[0] <= x && x <= overlap[1];
+        });
+    };
+    updateBrush();
+
+    svg.append('rect')
+        .attr('class', 'click-capture')
+        .style('opacity', 0)
+        .attr('x', -margin.top)
+        .attr('y', -margin.left)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .on('mousemove', brush2.on('brush'));
+
+    svg.on('mousemove', brush2.on('brush'));
+}
+
+overlappingWindows(d3.select('#overlapping-windows'), parentWidth);
 
 </script>
 </body>
