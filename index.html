@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="bootstrap.min.css" rel="stylesheet" media="screen" />
+<link href="bootstrap-responsive.min.css" rel="stylesheet" />
+<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+<!-- [if lt IE 9]>
+<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"> </script>
+<![endif]-->
+<style>
+.browser-logos {
+    text-align: center;
+    margin-top: 1em;
+}
+.footer {
+    text-align: center;
+    padding-top: 30px;
+    margin-top: 70px;
+    border-top: 1px solid #e5e5e5;
+    background-color: #f5f5f5;
+}
+.footer p {
+    margin-bottom: 0;
+    color: #777;
+}
+.footer a {
+    color: #444;  
+}
+
+/**
+ * spike train
+ */
+
+#spike-train {
+  width: 90%;
+  height: 70px;
+  margin-top: 20px;
+  margin-bottom: -70px;
+}
+#spike-train .axis,
+#spike-train .axis path,
+#spike-train .axis line {
+    stroke: lightgray;
+    fill: none;
+    stroke-width: 2px;
+    shape-rendering: crispEdges;
+}
+#spike-train .spike {
+    stroke: gray;
+    stroke-width: 2px;
+}
+
+/**
+ * spike count rate
+ */
+
+.spike,
+.axis path,
+.axis line {
+  fill: none;
+  stroke: gray;
+  stroke-width: 1px;
+}
+.spike {
+  stroke: lightgray;
+}
+.axis {
+  font: 10px sans-serif;
+  shape-rendering: crispEdges;
+}
+.brush .extent,
+.brush .resize {
+  fill-opacity: .1;
+  pointer-events: none;
+}
+.brush .text {
+  font: 10px sans-serif;
+}
+.bar {
+  fill-opacity: .5;
+  fill: skyblue;
+  stroke: steelblue;
+  stroke-opacity: .5;
+}
+.bartext {
+  font: 10px sans-serif;
+}
+.slider .handle {
+  opacity: .8;
+  fill: none;
+  stroke: firebrick;
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+/**
+ * window function
+ */
+.timeWindow {
+  fill-opacity: .5;
+  fill: skyblue;
+  stroke: none;
+}
+.spikeCount {
+  font: 10px sans-serif;
+}
+
+/**
+ * firing rate approximated by rectangular window function
+ */
+.firingRate {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1;
+}
+
+/**
+ * overlapping windows
+ */
+#overlapping-windows .timeWindow {
+  fill-opacity: .25;
+  fill: skyblue;
+}
+.selected {
+  stroke: black;
+}
+#overlapping-windows .staticBrush {
+  stroke: black;
+  stroke-width: 1;
+}
+
+</style>
+<title>Firing Rates</title>
+<body>
+  <header>
+    <div class="hero-unit">
+      <div class="container">
+        <h1>Measuring Firing Rates</h1>
+        <div id="spike-train"></div>
+        <h1><small>by Robert Costa, 2013 October 13</small></h1>
+        <div style="padding-right:30px;">
+        <p class="muted" style="line-height:1em;"><small>All methods demonstrated on this web page are based on the subsection <i>Measuring Firing Rates</i> of section <i>1.2 Spike Trains and Firing Rates</i> of <i>Dayan, P., Abbott, L. F., &amp; Abbott, L. (2001). Theoretical neuroscience: Computational and mathematical modeling of neural systems</i>.</small></p>
+        <p><b>Neurons</b> communicate with each other by firing so-called
+          <b><abbr title="an electrochemical potential">action potentials</abbr></b>.
+          A single action potential usually has a
+          duration of roughly one millisecond. If we ignore its
+          duration, amplitude and shape, we can treat an action potential as
+          a stereotypical on-off event, where a single action potential firing
+          is called a spike. A sequence of spikes recorded over a single
+          <abbr title="usually a time span of several seconds">trial</abbr> is
+          called a <b>spike train</b>. If we record multiple trials we can
+          average the number of spikes fired at a specific time point over
+          these trials. The resulting value is the <b>firing rate</b> of the
+          neuron at a specific time point. Since we can only record a limited
+          number of trials the real firing rate can only be approximated but
+          not determined exactly. In the following we will look at different methods to approximate firing rates. For demonstration purposes only a single spike train will be used. By averaging over multiple trials before applying any of the discussed methods, more accurate results can be achieved.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <div class="row-fluid">
+      <div class="span3 lead"><b>Spike Count Rate</b></div>
+      <div class="span9">
+        <p class="lead">The simplest approach to measuring firing rates is to count the number of spikes occurring within a given time frame.</p>
+        <div class="row-fluid">
+          <div class="span4">
+            <p>If we count over the whole trial we get the total number of spikes but loose all temporal resolution.</p>
+          </div>
+          <div class="span4">
+            <p>To know how the spike count changes over time we can subdivide the trial into smaller time bins.</p>
+          </div>
+          <div class="span4">
+            <p>The smaller the time bins the better the temporal resolution. But this comes at the expense of a decreasing rate resolution. For very small time bins the rate can only be either 1 or 0.</p>
+          </div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4" id="spike-count-max"></div>
+          <div class="span4" id="spike-count-var"></div>
+          <div class="span4" id="spike-count-min"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span3 lead"><b>Window Function</b></div>
+      <div class="span9">
+        <p class="lead">Counting spikes in pre-assigned time bins lets the firing rate approximation not only depend on the width of the time bins but also on their placement. By sliding a single time bin over the whole trial duration we can avoid the arbitrariness in placement.</p>
+        <div class="row-fluid">
+          <div class="span4">Counting spikes within a window around a specific time point avoids arbitrariness in placing of time bins.</div>
+          <div class="span4">The resulting firing rate appears to have a better temporal resolution. But at time points close to each other, firing rates are correlated.</div>
+          <div class="span4">The same spikes are counted for different time points, when those time points have overlapping windows.</div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4" id="window-function"></div>
+          <div class="span4" id="rect-window-rate"></div>
+          <div class="span4" id="overlapping-windows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span3 lead"><b>Linear Filter</b></div>
+      <div class="span9">
+        <p class="lead">Instead of using a rectangular window function that weighs all spikes in the same way, other window functions can be used. A gaussian window function will weigh spikes that are further away from the time point less than near ones. This can provide a smooth window function. Instead of summing the values up in discrete time steps, the integral can be computed. Such firing rate functions are also called linear filters and their window functions are called kernels.</p>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row-fluid">
+      <div class="span3 lead"><b>Causal Kernel</b></div>
+      <div class="span9">
+        <p class="lead">Both the rectangular window function and the Gaussian window function take not only spikes that happened in the past into account but also those happening in the future, with respect to a given timepoint on the spike train. To only use spikes that happened in the past the window function should become zero for negative values. A commonly used causal kernel is the alpha function.</p>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+        <div class="row-fluid">
+          <div class="span4"></div>
+          <div class="span4"></div>
+          <div class="span4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="footer">
+    <div class="container">
+      <p class="muted">
+        Web page designed by Robert Costa using
+        <a href="http://getbootstrap.com">Bootstrap</a>,
+        <a href="http://jquery.com/">jQuery</a> and
+        <a href="http://d3js.org/">D3.js</a>.
+        Bootstrap code is licensed under <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License v2.0</a>, Bootstrap documentation under <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+        jQuery is licensed under the <a href="http://github.com/jquery/jquery/blob/master/MIT-LICENSE.txt">MIT License</a>.
+        D3.js is released under <a href="http://opensource.org/licenses/BSD-3-Clause">BSD license</a>.
+        <a href="http://glyphicons.com">Glyphicons Free</a> licensed under <a href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+        JavaScript icon by Robert Costa (Own work), licensed under [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC-BY-SA-3.0</a>].
+        Google Chrome icon by Umut159 (Own work) [<a href="http://creativecommons.org/licenses/by-sa/3.0">CC-BY-SA-3.0</a>], <a href="http://commons.wikimedia.org/wiki/File%3AGoogle_Chrome_icon_(2011).png">via Wikimedia Commons</a>.
+        Mozilla Firefox icon by Mozilla Foundation [<a href="http://www.gnu.org/licenses/gpl.html">GPL</a> or <a href="http://www.gnu.org/licenses/lgpl.html">LGPL</a>], <a href="http://commons.wikimedia.org/wiki/File%3AMozilla_Firefox_3.5_logo_256.png">via Wikimedia Commons</a>.
+        Internet Explorer icon copyright by Microsoft Corporation.
+        Safari icon copyright by Apple Inc.
+        It is believed that the exhibition of icons to illustrate or identify the computer software in question qualifies as fair use under United States copyright law.<br>
+        *** Writing this web page was inspired by Bret Victor's web page <i><a href="http://worrydream.com/ScientificCommunicationAsSequentialArt/">Scientific Communication As Sequential Art</a>. ***
+      </p>
+    </div>
+  </footer>
+<script src="jquery-1.9.0.min.js" charset="utf-8"></script>
+<script src="d3.v3.min.js" charset="utf-8"></script>
+<script>
+var data = [
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
+  ];
+
+/**
+ * spike train unter main title
+ */
+
+function spikeTrain(parent) {
+    var width = $(parent.node()).width(),
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]).domain([0, data.length - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width)
+            .attr('height', height + 10);
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spikeX = function(d, i) { return xScale(i); };
+
+    svg.selectAll('.bar')
+        .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', spikeX)
+        .attr('x2', spikeX)
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+}
+
+spikeTrain(d3.select('#spike-train'));
+
+/**
+ * spike count rate graphs
+ */
+
+function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spike = svg.selectAll('.spike')
+        .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', function(d, i) { return xScale(i / data.length); })
+        .attr('x2', function(d, i) { return xScale(i / data.length); })
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+    var rebin = function(deltaT){
+        var binData = (function(){
+              var bins = [],
+                  binwidth = Math.max(Math.round(deltaT * data.length), 1);
+              deltaT = binwidth / data.length;
+              for (var i = 0; i < data.length; i += binwidth) {
+                  var spikecountrate = d3.sum(data.slice(i, i + binwidth));
+                  bins.push(spikecountrate);
+              }
+              return bins;
+            })(),
+            binXScale = d3.scale.linear().range([0, width - 1]).domain([0, binData.length]),
+            binWidth = Math.abs(binXScale(1) - binXScale(0)),
+            binYScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(binData)]);
+
+        chartBody.selectAll(".bar").remove();
+        chartBody.selectAll(".bar")
+            .data(binData)
+          .enter().append("rect")
+            .attr("class", "bar")
+            .attr("x", function(d, i) { return xScale(i * deltaT); })
+            .attr("width", xScale(deltaT))
+            .attr("y", binYScale)
+            .attr("height", function(d) { return height - binYScale(d); });
+
+        svg.selectAll(".bartext").remove();
+        var valueSet = d3.set();
+        svg.selectAll(".bartext")
+            .data(binData)
+          .enter().append('text')
+            .classed('bartext', true)
+            .attr("text-anchor", "middle")
+            .attr('y', function(d) { return binYScale(d) - 3; })
+            .attr('x', function(d, i){
+                var left = xScale(i * deltaT),
+                    right = Math.min(xScale((i + 1) * deltaT), width);
+                return .5 * (left + right);
+            })
+            .filter(function(d) {
+                if (valueSet.has(d) && xScale(deltaT) < 15) {
+                    return false;
+                }
+                valueSet.add(d);
+                return true;
+            })
+            .text(String);
+    }
+
+
+    var brush = d3.svg.brush()
+        .x(xScale)
+        .extent([sliderPos, sliderPos])
+        .on("brush", brushed);
+
+    var slider = svg.append("g")
+        .attr("class", "slider")
+        .call(brush);
+
+    slider.selectAll(".extent, .resize")
+        .remove();
+
+    slider.select(".background")
+        .attr("height", height);
+
+    if (activeSlider) {
+        var handle = slider.append('line')
+            .classed('handle', true)
+            .attr("y1", -5)
+            .attr("y2", height + 5);
+
+        function brushed() {
+            if (d3.event) {
+                var mouseX = d3.mouse(this)[0];
+                if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                    var value = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                    brush.extent([value, value]);
+                }
+            }
+            var value = d3.mean(brush.extent()),
+                x = xScale(value);
+            handle.attr({x1: x, x2: x});
+            rebin(value);
+        }
+        brushed();
+        svg.append('rect')
+          .attr('class', 'click-capture')
+          .style('opacity', 0)
+          .attr('x', -margin.top)
+          .attr('y', -margin.left)
+          .attr('width', width + margin.left + margin.right)
+          .attr('height', height + margin.top + margin.bottom)
+          .on('mousemove', brushed);
+        svg.on('mousemove', brushed);      
+    } else {
+        brush.extent([sliderPos, sliderPos]);
+        rebin(sliderPos);
+    }
+}
+var parentWidth = $('#spike-count-max').width();
+spikeCountRate(d3.select('#spike-count-max'), 1, false, parentWidth);
+spikeCountRate(d3.select('#spike-count-var'), .125, true, parentWidth);
+spikeCountRate(d3.select('#spike-count-min'), .01, false, parentWidth);
+
+/**
+ * window function
+ */
+
+function windowFunction(parent, parentWidth) {
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spike = svg.selectAll('.spike')
+      .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', function(d, i) { return xScale(i / data.length); })
+        .attr('x2', function(d, i) { return xScale(i / data.length); })
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+
+    var winWidth = .2,
+        winExtent = function(t, winWidth) {
+          return [t - .5 * winWidth, t + .5 * winWidth];
+        };
+
+    var brush = d3.svg.brush()
+        .x(xScale)
+        .extent(winExtent(.4, winWidth))
+        .on("brush", brushed);
+    var slider = svg.append("g")
+        .attr("class", "slider")
+        .call(brush);
+
+    slider.selectAll(".extent, .resize")
+        .remove();
+
+    slider.select(".background")
+        .attr("height", height);
+
+    var handleOffset = 5,
+        handle = slider.append('line')
+          .classed('handle', true)
+          .attr("y1", -handleOffset)
+          .attr("y2", height + handleOffset);
+
+    var timeWindow = chartBody.append('rect')
+        .classed('timeWindow', true)
+        .attr("x", xScale(brush.extent()[0]))
+        .attr("width", xScale(brush.extent()[1] - brush.extent()[0]))
+        .attr("y", 0)
+        .attr("height", height);
+
+    var spikeCount = svg.append('text')
+        .classed('spikeCount',  true)
+        .attr('y', -handleOffset - 3)
+        .attr('text-anchor', 'middle')
+        .text('10');
+
+    function brushed() {
+        if (d3.event) {
+            var mouseX = d3.mouse(this)[0];
+            if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+              t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+              brush.extent(winExtent(t, winWidth));
+            }
+        }
+        var middle = xScale(d3.mean(brush.extent())),
+            brushStart = brush.extent()[0],
+            brushEnd = brush.extent()[1];
+        handle.attr({x1: middle, x2: middle});
+        timeWindow
+            .attr("x", xScale(brushStart))
+            .attr("width", xScale(brushEnd - brushStart));
+        spikeCount
+            .attr('x', middle)
+            .text(function(){
+                var dataStart = Math.max(Math.round(brushStart * data.length), 0),
+                    dataEnd = Math.min(Math.round(brushEnd * data.length), data.length);
+                return d3.sum(data.slice(dataStart, dataEnd));
+            });
+    }
+    brushed();
+
+    svg.append('rect')
+      .attr('class', 'click-capture')
+      .style('opacity', 0)
+      .attr('x', -margin.top)
+      .attr('y', -margin.left)
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .on('mousemove', brushed);
+    svg.on('mousemove', brushed);
+}
+
+windowFunction(d3.select('#window-function'), parentWidth);
+
+/**
+ * firing rate approximated by rectangular window function
+ */
+
+function rectWindowRate(parent, parentWidth){
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spikeScale = function(d, i) { return xScale(i / (data.length - 1)); }, 
+        spike = svg.selectAll('.spike')
+        .data(data)
+      .enter().append('line')
+        .classed('spike', true)
+        .attr('x1', spikeScale)
+        .attr('x2', spikeScale)
+        .attr('y1', yScale(0))
+        .attr('y2', yScale);
+
+    var winWidth = .2,
+        winExtent = function(t, winWidth) {
+          return [t - .5 * winWidth, t + .5 * winWidth];
+        };
+
+    var firingRate = data.map(function(d, i){
+            var winBins = winWidth * data.length;
+                start = Math.floor(i - .5 * winBins),
+                end = Math.floor(start + winBins);
+            return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        });
+
+    var rateLine = d3.svg.line()
+        .x(function(d, i){ return xScale(i / (data.length - 1)); })
+        .y(yScale)
+        .interpolate('step-after');
+
+    var ratePath = svg.append('path')
+        .classed('firingRate', true)
+        .attr('d', rateLine(firingRate.map(function(d) { return d / d3.max(firingRate); })));
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+
+    var brush = d3.svg.brush()
+        .x(xScale)
+        .extent(winExtent(.4, winWidth))
+        .on("brush", brushed);
+
+    var slider = svg.append("g")
+        .attr("class", "slider")
+        .call(brush);
+
+    slider.selectAll(".extent, .resize")
+        .remove();
+
+    slider.select(".background")
+        .attr("height", height);
+
+    var handleOffset = 5,
+        handle = slider.append('line')
+          .classed('handle', true)
+          .attr("y1", -handleOffset)
+          .attr("y2", height + handleOffset);
+
+    var spikeCount = svg.append('text')
+        .classed('spikeCount',  true)
+        .attr('y', -handleOffset - 3)
+        .attr('text-anchor', 'middle');
+/*
+    var timeWindow = chartBody.append('rect')
+        .classed('timeWindow', true)
+        .attr("y", 0)
+        .attr("height", height);
+*/
+
+    function brushed() {
+        if (d3.event) {
+            var mouseX = d3.mouse(this)[0];
+            if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                brush.extent([t, t]);
+            }
+        }
+        var brushValue = d3.mean(brush.extent()),
+            middle = xScale(brushValue);
+        handle.attr({x1: middle, x2: middle});
+
+        var timeIndex = Math.round(brushValue * (firingRate.length - 1)),
+            i = Math.min(Math.max(timeIndex, 0), firingRate.length - 1);
+
+        spikeCount
+            .attr('x', middle)
+            .text(firingRate[i]);
+
+        var winBins = winWidth * firingRate.length;
+            start = Math.floor(i - .5 * winBins),
+            end = Math.floor(start + winBins);
+        //return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        spike.classed("selected", function(d, i) {
+            return start < i && i < end;
+        });
+
+/*
+        timeWindow
+            .attr("x", xScale(brushValue - .5 * winWidth))
+            .attr("width", xScale(winWidth));*/
+    }
+    brushed();
+
+    svg.append('rect')
+      .attr('class', 'click-capture')
+      .style('opacity', 0)
+      .attr('x', -margin.top)
+      .attr('y', -margin.left)
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .on('mousemove', brushed);
+    svg.on('mousemove', brushed);
+}
+
+rectWindowRate(d3.select('#rect-window-rate'), parentWidth);
+
+/**
+ * overlapping windows
+ */
+
+function overlappingWindows(parent, parentWidth){
+    var margin = {top: 15, bottom: 20, left: 15, right: 15},
+        width = parentWidth - margin.left - margin.right,
+        height = 25;
+
+    var xScale = d3.scale.linear().range([0, width - 1]),
+        yScale = d3.scale.linear().range([height - 1, 0]);
+
+    var svg = parent.append('svg')
+              .attr('width', width + margin.left + margin.right)
+              .attr('height', height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+    svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+    var spikeScale = function(d, i) { return xScale(i / (data.length - 1)); }, 
+        spike = svg.selectAll('.spike')
+            .data(data)
+          .enter().append('line')
+            .classed('spike', true)
+            .attr('x1', spikeScale)
+            .attr('x2', spikeScale)
+            .attr('y1', yScale(0))
+            .attr('y2', yScale);
+
+    var winWidth = .2;
+
+    var firingRate = data.map(function(d, i){
+            var winBins = winWidth * data.length;
+                start = Math.floor(i - .5 * winBins),
+                end = Math.floor(start + winBins);
+            return d3.sum(data.slice(Math.max(start, 0), Math.min(end, data.length - 1)));
+        });
+
+    var rateLine = d3.svg.line()
+        .x(function(d, i){ return xScale(i / (data.length - 1)); })
+        .y(yScale)
+        .interpolate('step-after');
+
+    var ratePath = svg.append('path')
+        .classed('firingRate', true)
+        .attr('d', rateLine(firingRate.map(function(d) { return d / d3.max(firingRate); })));
+
+    var clip = svg.append("defs").append("svg:clipPath")
+            .attr("id", "clip")
+            .append("svg:rect")
+            .attr("id", "clip-rect")
+            .attr("x", 0)
+            .attr("y", -1)
+            .attr("width", width)
+            .attr("height", height);
+            
+    var chartBody = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
+    var makeWindowBrush = function(parent, xScale, startpos, winWidth, windowFunction, updateBrush, staticBrush){
+        var winExtent = function(center, width){
+              var start = center - .5 * width;
+              return [start, start + width];
+            };
+
+        var brush = d3.svg.brush()
+            .x(xScale)
+            .extent(winExtent(startpos, winWidth))
+            .on("brush", brushed);
+
+        var slider = svg.append("g")
+            .attr("class", "slider")
+            .call(brush);
+
+        slider.selectAll(".extent, .resize")
+            .remove();
+
+        slider.select(".background")
+            .attr("height", height);
+
+        var handleOverlap = 5,
+            handle = slider.append('line')
+                .classed('handle', true)
+                .classed('staticBrush', staticBrush)
+                .attr("y1", -handleOverlap)
+                .attr("y2", height + handleOverlap);
+
+        var spikeCount = svg.append('text')
+                .classed('spikeCount',  true)
+                .attr('y', -handleOverlap - 3)
+                .attr('text-anchor', 'middle');
+
+        var timeWindow = chartBody.append('rect')
+                .classed('timeWindow', true)
+                .attr("y", 0)
+                .attr("height", height);
+
+        function brushed() {
+            var mouseX = d3.event && d3.mouse(this)[0];
+            if (d3.event && d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+                t = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+                brush.extent(winExtent(t, winWidth));
+            }
+
+            var time = d3.mean(brush.extent()),
+                x = xScale(time);
+
+            handle.attr({x1: x, x2: x});
+            spikeCount.attr('x', x).text(windowFunction(time));
+            timeWindow
+                .attr("x", xScale(brush.extent()[0]))
+                .attr("width", xScale(brush.extent()[1] - brush.extent()[0]));
+
+            updateBrush();
+        };
+        brushed();
+        return brush;
+    };
+
+    var windowFunction = function(t){
+            var timeIndex = Math.round(t * firingRate.length);
+            return firingRate[Math.min(Math.max(timeIndex, 0), firingRate.length - 1)];
+        },
+        brush1 = makeWindowBrush(svg, xScale, .5, winWidth, windowFunction, updateBrush, true),
+        brush2 = makeWindowBrush(svg, xScale, .4, winWidth, windowFunction, updateBrush, false);
+
+    function updateBrush(){
+        if (!brush1 || !brush2) {
+            return;
+        }
+
+        var e1 = brush1.extent(),
+            e2 = brush2.extent(),
+            overlap = [0, -1];
+
+        if (e2[1] - e1[0] < e1[1] - e2[0]) {
+            overlap = [e1[0], e2[1]];
+        } else {
+            overlap = [e2[0], e1[1]];
+        }
+
+        spike.classed("selected", function(d, i) {
+            x = i / data.length;
+            return overlap[0] <= x && x <= overlap[1];
+        });
+    };
+    updateBrush();
+
+    svg.append('rect')
+        .attr('class', 'click-capture')
+        .style('opacity', 0)
+        .attr('x', -margin.top)
+        .attr('y', -margin.left)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .on('mousemove', brush2.on('brush'));
+
+    svg.on('mousemove', brush2.on('brush'));
+}
+
+overlappingWindows(d3.select('#overlapping-windows'), parentWidth);
+
+/**
+ * refresh graphics when browser size changes
+ */
+var timeout;
+$(window).resize(function(){
+    clearTimeout(timeout);
+    timeout = setTimeout(function(){ location.reload(true); }, 300);
+});
+</script>
+</body>

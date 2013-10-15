@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Spike Count Rate</title>
+	<style>
+		.spike,
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: gray;
+      stroke-width: 1px;
+		}
+    .spike {
+      stroke: lightgray;
+    }
+    .axis {
+      font: 10px sans-serif;
+      shape-rendering: crispEdges;
+    }
+    .brush .extent,
+    .brush .resize {
+      fill-opacity: .1;
+      pointer-events: none;
+    }
+    .brush .text {
+      font: 10px sans-serif;
+    }
+    .bar {
+      fill-opacity: .7;
+      fill: skyblue;
+      stroke: steelblue;
+    }
+    .bartext {
+      font: 10px sans-serif;
+    }
+    .slider .handle {
+      opacity: .5;
+      fill: firebrick;
+      stroke: steelblue;
+      stroke-width: 1px;
+      pointer-events: none;
+    }
+	</style>
+</head>
+<body>
+<script src="d3.v3.min.js" charset="utf-8"></script>
+<script type="text/javascript">
+var data = [
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
+	],
+	parent = d3.select('body'),
+	width = 200,
+  height = 25,
+  margin = {top: 15, bottom: 20, left: 15, right: 15};
+
+var xScale = d3.scale.linear().range([0, width - 1]),
+ 	  yScale = d3.scale.linear().range([height - 1, 0]);
+
+var svg = parent.append('svg')
+          .attr('width', width + margin.left + margin.right)
+          .attr('height', height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+svg.append("g")
+    .classed("x axis", true)
+    .attr("transform", "translate(0," + yScale(0) + ")")
+    .call(d3.svg.axis().scale(xScale).orient('bottom').ticks(3).tickFormat(''));
+
+var spike = svg.selectAll('.spike')
+	.data(data)
+  .enter().append('line')
+  	.classed('spike', true)
+    .attr('x1', function(d, i) { return xScale(i / data.length); })
+    .attr('x2', function(d, i) { return xScale(i / data.length); })
+  	.attr('y1', yScale(0))
+  	.attr('y2', yScale);
+
+
+var clip = svg.append("defs").append("svg:clipPath")
+        .attr("id", "clip")
+        .append("svg:rect")
+        .attr("id", "clip-rect")
+        .attr("x", 0)
+        .attr("y", -1)
+        .attr("width", width)
+        .attr("height", height);
+        
+var chartBody = svg.append("g")
+    .attr("clip-path", "url(#clip)");
+
+var rebin = function(deltaT){
+    var binData = (function(){
+          var bins = [],
+              binwidth = Math.max(Math.round(deltaT * data.length), 1);
+          deltaT = binwidth / data.length;
+          for (var i = 0; i < data.length; i += binwidth) {
+              var spikecountrate = d3.sum(data.slice(i, i + binwidth));
+              bins.push(spikecountrate);
+          }
+          return bins;
+        })(),
+        binXScale = d3.scale.linear().range([0, width - 1]).domain([0, binData.length]),
+        binWidth = Math.abs(binXScale(1) - binXScale(0)),
+        binYScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(binData)]);
+
+    chartBody.selectAll(".bar").remove();
+    chartBody.selectAll(".bar")
+        .data(binData)
+      .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function(d, i) { return xScale(i * deltaT); })
+        .attr("width", xScale(deltaT))
+        .attr("y", binYScale)
+        .attr("height", function(d) { return height - binYScale(d); });
+
+    svg.selectAll(".bartext").remove();
+    var valueSet = d3.set();
+    svg.selectAll(".bartext")
+        .data(binData)
+      .enter().append('text')
+        .classed('bartext', true)
+        .attr("text-anchor", "middle")
+        .attr('y', function(d) { return binYScale(d) - 3; })
+        .attr('x', function(d, i){
+            var left = xScale(i * deltaT),
+                right = Math.min(xScale((i + 1) * deltaT), width);
+            return .5 * (left + right);
+        })
+        .filter(function(d) {
+            if (valueSet.has(d) && xScale(deltaT) < 15) {
+                return false;
+            }
+            valueSet.add(d);
+            return true;
+        })
+        .text(String);
+}
+
+
+var brush = d3.svg.brush()
+    .x(xScale)
+    .extent([1, 1])
+    .on("brush", brushed);
+
+var slider = svg.append("g")
+    .attr("class", "slider")
+    .call(brush);
+
+slider.selectAll(".extent, .resize")
+    .remove();
+
+slider.select(".background")
+    .attr("height", height);
+
+var handle = slider.append("circle")
+    .attr("class", "handle")
+    .attr("transform", "translate(0," + height + ")")
+    .attr("r", 5);
+
+slider
+    .call(brush.event)
+  .transition() // gratuitous intro!
+    .duration(3000)
+    .ease('exp-out')
+    .call(brush.extent([.125, .125]))
+    .call(brush.event);
+
+function brushed() {
+    var value = brush.extent()[0],
+        mouseX = d3.mouse(this)[0];
+
+    if (d3.event.sourceEvent !== null && mouseX) { // not a programmatic event
+      value = Math.min(Math.max(xScale.invert(mouseX), 0), 1);
+      brush.extent([value, value]);
+    }
+
+    handle.attr("cx", xScale(value));
+    rebin(value);
+}
+svg.append('rect')
+  .attr('class', 'click-capture')
+  .style('opacity', 0)
+  .attr('x', -margin.top)
+  .attr('y', -margin.left)
+  .attr('width', width + margin.left + margin.right)
+  .attr('height', height + margin.top + margin.bottom)
+  .on('mousemove', brushed);
+svg.on('mousemove', brushed);
+
+</script>
+</body>
+</html>
