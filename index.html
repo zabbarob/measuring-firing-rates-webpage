@@ -251,7 +251,6 @@
       </p>
     </div>
   </footer>
-<script src="jquery-1.9.0.min.js" charset="utf-8"></script>
 <script src="d3.v3.min.js" charset="utf-8"></script>
 <script>
 var data = [
@@ -266,7 +265,7 @@ var data = [
  */
 
 function spikeTrain(parent) {
-    var width = $(parent.node()).width(),
+    var width = Number(parent.style('width').slice(0, -2));
         height = 25;
 
     var xScale = d3.scale.linear().range([0, width - 1]).domain([0, data.length - 1]),
@@ -439,7 +438,7 @@ function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
         rebin(sliderPos);
     }
 }
-var parentWidth = $('#spike-count-max').width();
+var parentWidth = Number(d3.select('#spike-count-max').style('width').slice(0, -2));
 spikeCountRate(d3.select('#spike-count-max'), 1, false, parentWidth);
 spikeCountRate(d3.select('#spike-count-var'), .125, true, parentWidth);
 spikeCountRate(d3.select('#spike-count-min'), .01, false, parentWidth);
@@ -883,7 +882,7 @@ overlappingWindows(d3.select('#overlapping-windows'), parentWidth);
  * refresh graphics when browser size changes
  */
 var timeout;
-$(window).resize(function(){
+d3.select(window).on('resize', function(){
     clearTimeout(timeout);
     timeout = setTimeout(function(){ location.reload(true); }, 300);
 });
