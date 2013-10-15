@@ -260,10 +260,13 @@ var data = [
     0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
   ];
 
+var parentWidth = Number(d3.select('#spike-count-max').style('width').slice(0, -2));
+
 /**
  * spike train unter main title
  */
 
+(function(){
 function spikeTrain(parent) {
     var width = Number(parent.style('width').slice(0, -2));
         height = 25;
@@ -293,11 +296,12 @@ function spikeTrain(parent) {
 }
 
 spikeTrain(d3.select('#spike-train'));
+})();
 
 /**
  * spike count rate graphs
  */
-
+(function(){
 function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
     var margin = {top: 15, bottom: 20, left: 15, right: 15},
         width = parentWidth - margin.left - margin.right,
@@ -438,15 +442,16 @@ function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
         rebin(sliderPos);
     }
 }
-var parentWidth = Number(d3.select('#spike-count-max').style('width').slice(0, -2));
 spikeCountRate(d3.select('#spike-count-max'), 1, false, parentWidth);
 spikeCountRate(d3.select('#spike-count-var'), .125, true, parentWidth);
 spikeCountRate(d3.select('#spike-count-min'), .01, false, parentWidth);
+})();
 
 /**
  * window function
  */
 
+(function(){
 function windowFunction(parent, parentWidth) {
     var margin = {top: 15, bottom: 20, left: 15, right: 15},
         width = parentWidth - margin.left - margin.right,
@@ -564,11 +569,13 @@ function windowFunction(parent, parentWidth) {
 }
 
 windowFunction(d3.select('#window-function'), parentWidth);
+})();
 
 /**
  * firing rate approximated by rectangular window function
  */
 
+(function(){
 function rectWindowRate(parent, parentWidth){
     var margin = {top: 15, bottom: 20, left: 15, right: 15},
         width = parentWidth - margin.left - margin.right,
@@ -710,11 +717,12 @@ function rectWindowRate(parent, parentWidth){
 }
 
 rectWindowRate(d3.select('#rect-window-rate'), parentWidth);
+})();
 
 /**
  * overlapping windows
  */
-
+(function(){
 function overlappingWindows(parent, parentWidth){
     var margin = {top: 15, bottom: 20, left: 15, right: 15},
         width = parentWidth - margin.left - margin.right,
@@ -877,14 +885,17 @@ function overlappingWindows(parent, parentWidth){
 }
 
 overlappingWindows(d3.select('#overlapping-windows'), parentWidth);
+})();
 
 /**
  * refresh graphics when browser size changes
  */
+(function(){
 var timeout;
 d3.select(window).on('resize', function(){
     clearTimeout(timeout);
     timeout = setTimeout(function(){ location.reload(true); }, 300);
 });
+})();
 </script>
 </body>
