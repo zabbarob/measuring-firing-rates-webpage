@@ -395,8 +395,7 @@ function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
 
     var brush = d3.svg.brush()
         .x(xScale)
-        .extent([sliderPos, sliderPos])
-        .on("brush", brushed);
+        .extent([sliderPos, sliderPos]);
 
     var slider = svg.append("g")
         .attr("class", "slider")
@@ -437,10 +436,14 @@ function spikeCountRate(parent, sliderPos, activeSlider, parentWidth) {
           .attr('height', height + margin.top + margin.bottom)
           .on('mousemove', brushed);
         svg.on('mousemove', brushed);      
+
+        brush
+            .on("brush", brushed);
     } else {
         brush.extent([sliderPos, sliderPos]);
         rebin(sliderPos);
     }
+
 }
 spikeCountRate(d3.select('#spike-count-max'), 1, false, parentWidth);
 spikeCountRate(d3.select('#spike-count-var'), .125, true, parentWidth);
